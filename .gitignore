@@ -42,6 +42,10 @@ typings/
 # Optional npm cache directory
 .npm
 
+## images
+src/images/*
+!src/images/.placeholder
+
 # Optional eslint cache
 .eslintcache
 
