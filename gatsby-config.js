@@ -16,8 +16,15 @@ module.exports = {
       resolve: `gatsby-source-filesystem`,
       options: {
         name: `images`,
-        path: `${__dirname}/src/images`,
+        path: `${__dirname}/static/images`,
       },
+    },
+    {
+      resolve: `gatsby-source-filesystem`,
+      options: {
+          name: `pages`,
+          path: `${__dirname}/src/pages`,
+      }
     },
     {
       resolve: require.resolve(`${__dirname}/plugins/gatsby-transformer-cloudinary-stackbit`),
@@ -26,9 +33,10 @@ module.exports = {
         apiKey: process.env.CLOUDINARY_API_KEY,
         apiSecret: process.env.CLOUDINARY_API_SECRET,
         uploadFolder: 'plugin-test',
-        downloadFolder: `${__dirname}/src/images`,
+        downloadFolder: `${__dirname}/static/images`,
       },
     },
+    `gatsby-transformer-remark`,
     {
       resolve: `gatsby-plugin-manifest`,
       options: {
@@ -40,7 +48,7 @@ module.exports = {
         // https://css-tricks.com/meta-theme-color-and-trickery/
         // theme_color: `#663399`,
         display: `minimal-ui`,
-        icon: `src/images/gatsby-icon.png`, // This path is relative to the root of the site.
+        icon: `static/images/gatsby-icon.png`, // This path is relative to the root of the site.
       },
     },
     // this (optional) plugin enables Progressive Web App + Offline functionality

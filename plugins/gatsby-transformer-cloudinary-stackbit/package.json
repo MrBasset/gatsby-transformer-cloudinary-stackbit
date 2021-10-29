@@ -29,6 +29,7 @@
   "dependencies": {    
     "axios": "^0.21.4",
     "cloudinary": "^1.26.3",
+    "common-tags": "^1.8.0",
     "fast-json-stable-stringify": "^2.1.0",
     "fs-extra": "^10.0.0"
   }

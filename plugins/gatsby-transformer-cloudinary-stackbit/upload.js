@@ -120,37 +120,3 @@ function verifyRequiredOptions(reporter) {
     }
   });
 }
-
-exports.queryDominantColor = (public_id) => {
-
-  const {
-    apiKey,
-    apiSecret,
-    cloudName,
-  } = getPluginOptions();
-
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-  });
-
-  return new Promise(function (resolve, reject) {
-    cloudinary.api.resource(public_id, { colors: true }, function(result, error) {
-
-      if (error) reject(error);
-
-      console.log(result);
-
-      var color = "#fff";
-
-      if (response.colors && response.color.length > 1) {
-
-        color = response.colors[0,0];
-      }
-
-      resolve(color);
-
-    });
-  })
-}

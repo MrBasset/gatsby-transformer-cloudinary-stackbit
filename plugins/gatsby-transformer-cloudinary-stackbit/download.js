@@ -53,4 +53,36 @@ exports.downloadFile = async (fileUrl, downloadFolder, reporter) => {
     } catch (err) {
       reporter.error(err);
     }
-  }; 
+  };
+
+  
+exports.queryDominantColor = async (public_id) => {
+
+    const {
+      apiKey,
+      apiSecret,
+      cloudName,
+    } = getPluginOptions();
+  
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+
+    var color = "#fff";
+  
+    try {
+      const result = await cloudinary.api.resource(public_id, { colors: true });
+      //console.log(result);
+    
+      if (result.colors && result.colors.length > 1) {
+  
+        color = result.colors[0,0];
+      }
+    } catch (error ) {
+        console.log('Error fetching dominant colour', error);
+    } finally {
+      return color;
+    }
+  }

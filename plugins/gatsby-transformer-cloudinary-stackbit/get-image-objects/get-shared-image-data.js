@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { getPluginOptions } = require('../options');
-const { queryDominantColor } = require('../upload');
+const { queryDominantColor } = require('../download');
 
 const base64Cache = {};
 
@@ -54,45 +54,61 @@ exports.getAspectRatio = (transformations, originalAspectRatio) => {
   return w / h;
 };
 
+exports.getTracedSVG = async ({
+  chained,
+  cloudName,
+  public_id,
+  transformations = [],
+  colors = 5,
+  detail = 0.1,
+  version
+}) => {
+
+  const tracedSVGURL = exports.getImageURL({
+    transformations: transformations.concat(`e_vectorize:colors:${colors}:detail:${detail}`),
+    public_id,
+    version,
+    cloudName,
+    chained,
+    format: 'svg'
+  });
+  const base64 = await fetchBase64(tracedSVGURL, 'svg+xml'); //, reporter);
+
+  return base64;
+}
+
 exports.getBase64 = async ({
-  base64Transformations,
   base64Width,
   chained,
   cloudName,
-  defaultBase64,
-  ignoreDefaultBase64,
   public_id,
   //reporter,
   transformations = [],
   version,
 }) => {
-  if (defaultBase64) {
-    if (!ignoreDefaultBase64 || getPluginOptions().alwaysUseDefaultBase64) {
-      return defaultBase64;
-    }
-  }
 
-  const b64Transformations = base64Transformations || transformations;
+  const b64Transformations = [...transformations];
+  b64Transformations.push(`w_${base64Width}`);
   const base64URL = exports.getImageURL({
-    transformations: b64Transformations.concat(`w_${base64Width}`),
+    transformations: b64Transformations,
     public_id,
     version,
     cloudName,
     chained,
   });
-  const base64 = await fetchBase64(base64URL); //, reporter);
+  const base64 = await fetchBase64(base64URL, 'jpeg'); //, reporter);
 
   return base64;
 };
 
-async function fetchBase64(url) { //}, reporter) {
+async function fetchBase64(url, format) { //}, reporter) {
   if (!base64Cache[url]) {
     logBase64Retrieval(url); //, reporter);
     base64Cache[url] = axios.get(url, { responseType: 'arraybuffer' });
   }
   const response = await base64Cache[url];
   const data = Buffer.from(response.data).toString('base64');
-  return `data:image/jpeg;base64,${data}`;
+  return `data:image/${format};base64,${data}`;
 }
 
 let fetchedBase64ImageCount = 0;

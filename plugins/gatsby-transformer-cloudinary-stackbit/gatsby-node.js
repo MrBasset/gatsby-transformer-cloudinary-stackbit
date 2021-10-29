@@ -1,14 +1,16 @@
 const {
-    getAspectRatio,
     getBase64,
     getImageURL,
     getDominantColor,
+    getTracedSVG,
 } = require('./get-image-objects/get-shared-image-data');
 const { setPluginOptions, getPluginOptions } = require('./options');
 const pluginOptions = getPluginOptions();
 
 const { generateImageData } = require('gatsby-plugin-image');
 const { getGatsbyImageResolver } = require('gatsby-plugin-image/graphql-utils');
+
+const { stripIndent } = require("common-tags");
 
 const { uploadImageNodeToCloudinary } = require('./upload');
 const { createImageNode } = require('./create-image-node');
@@ -20,37 +22,33 @@ const { getAllCloudinaryImages, downloadFile } = require('./download');
 
 const ALLOWED_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
 
-exports.onPreBootstrap = async ({ store, cache, reporter }, options ) => {
+exports.onPreBootstrap = async ({ reporter }, options ) => {
 
-    console.log("onPreBootstrap")
     const results = await getAllCloudinaryImages(reporter);
 
-    console.log('results',results);
-
     if (results.resources) {
-    results.resources.forEach(async image => {
+        results.resources.forEach(async image => {
 
-        const url = getImageURL({
-            public_id: image.public_id,
-            cloudName: options.cloudName,
-            transformations: ['w_275'],
-            format: image.format
+            const url = getImageURL({
+                public_id: image.public_id,
+                cloudName: options.cloudName,
+                transformations: ['w_275'],
+                format: image.format
+            });
+
+            await downloadFile(url, options.downloadFolder, reporter);
         });
-
-        await downloadFile(url, options.downloadFolder, reporter);
-    });
-
-
     }
 }
 
 const generateImageSource = (baseURL, width, height, format, fit, options) => {
 
-    console.log('generateImageSource::params',baseURL, width, height, format, fit, options);
+    console.log(`Generating image source, have the dimensions width: ${width} and height: ${height}. Options are`, options);
 
-    const transformations = []; //options.transformations;
-    transformations.push[`w_${width}`];
-    transformations.push[`h_${height}`];
+    //use spread to clone the objects
+    const transformations = [...options.transformations];
+    transformations.push(`w_${width}`);
+    transformations.push(`h_${height}`);
 
     const src = getImageURL({
         public_id: baseURL,
@@ -65,10 +63,6 @@ const generateImageSource = (baseURL, width, height, format, fit, options) => {
 
 const resolveGatsbyImageData = async (image, options, args) => {
 
-    console.log('Image', image);
-    console.log('options', options);
-    console.log('args', args);
-
     let {
         cloudName,
         format,
@@ -79,14 +73,30 @@ const resolveGatsbyImageData = async (image, options, args) => {
     } = image;
 
     let {
+        blurUpOptions = {}, 
         chained,
         formats = ['AUTO'],
         height,
         layout = 'CONSTRAINED',
+        namedTransformations = [],
+        overrideTransformations = [],
         placeholder = 'BLURRED',
-        transformations,
+        resizeOptions = {},
+        tracedSVGOptions = {},
         width
     } = options;
+
+    //todo build a single transformations array to pass to the function.
+    let transformations = overrideTransformations;
+    if (!!overrideTransformations) {
+        transformations = namedTransformations;
+
+        if (resizeOptions && resizeOptions.resize) {
+            transformations.push(`c_${resizeOptions.resize.toLowerCase()}`);
+
+            if (resizeOptions.qualifiers) transformations.push(resizeOptions.qualifiers);
+        }
+    }
 
     const sourceMetadata = {
         format: format,
@@ -100,9 +110,7 @@ const resolveGatsbyImageData = async (image, options, args) => {
         cloudName: cloudName
     };
 
-    const combined = {...options, ...cloudinary, formats }
-
-    console.log('Combined', combined);
+    const combined = {...options, ...cloudinary, formats, transformations }
 
     const imageDataArgs = {
         pluginName: `gatsby-transformer-cloudinary-stackbit`,
@@ -111,40 +119,115 @@ const resolveGatsbyImageData = async (image, options, args) => {
         filename: public_id,
         layout,
         options: combined,
-        width: width || originalWidth,
-        height: height || originalHeight
+        width,
+        height
     }
     // Generating placeholders is optional, but recommended
     if (placeholder === "BLURRED") {
 
-        //TODO: need to get this a different way, preferably computing only once
-        imageDataArgs.placeholderURL = await getBase64({
-            base64Width: 30,
-            chained,
-            cloudName,
-            public_id,
-            transformations,
-            version,
-        });
+        if (!!blurUpOptions.defaultBase64) {
+            imageDataArgs.placeholderURL = blurUpOptions.defaultBase64
+        } else {
+            const bWidth = blurUpOptions.width || 30;
+
+            imageDataArgs.placeholderURL = await getBase64({
+                base64Width: bWidth,
+                chained,
+                cloudName,
+                public_id,
+                transformations,
+                version,
+            });
+        }
     }
     else if (placeholder === "DOMINANT_COLOR") {
-        imageDataArgs.backgroundColor = await getDominantColor(image.public_id);
+        imageDataArgs.backgroundColor = await getDominantColor({public_id});
+    }
+    else {
+        if (!!tracedSVGOptions.defaultBase64) {
+            imageDataArgs.placeholderURL = tracedSVGOptions.defaultBase64;
+        } else {
+            imageDataArgs.placeholderURL = await getTracedSVG({
+                chained,
+                cloudName,
+                public_id,
+                transformations,
+                colors: tracedSVGOptions.colors,
+                detail: tracedSVGOptions.detail,
+                version
+            });
+        }
     }
 
-    console.log("imageDataArgs is: ", imageDataArgs);
-
-    // You could also calculate dominant color, and pass that as `backgroundColor`
-    // gatsby-plugin-sharp includes helpers that you can use to generate a tracedSVG or calculate
-    // the dominant color of a local file, if you don't want to handle it in your plugin
-    const returnedImage = generateImageData(imageDataArgs);
-
-    console.log("Returned Image is: ", returnedImage);
-
-    return returnedImage;
+    //const returnedImage = generateImageData(imageDataArgs);
+    return generateImageData(imageDataArgs);
 }
 
 exports.createSchemaCustomization = ({ actions }) => {
-    actions.createTypes(`
+    
+    const { createTypes, createFieldExtension } = actions
+
+    createFieldExtension({
+        name: 'fileByAbsolutePath',
+        extend: (options, prevFieldConfig) => ({
+            resolve: function (src, args, context, info) {
+
+                // look up original string, i.e img/photo.jpg
+                const { fieldName } = info
+                const partialPath = src[fieldName]
+                if (!partialPath) {
+                    return null
+                }
+
+                // get the absolute path of the image file in the filesystem
+                const filePath = path.join(
+                    __dirname,
+                    'static',
+                    partialPath
+                )
+
+                // look for a node with matching path
+                const fileNode = context.nodeModel.runQuery({
+                    firstOnly: true,
+                    type: 'File',
+                    query: {
+                        filter: {
+                            absolutePath: {
+                                eq: filePath
+                            }
+                        }
+                    }
+                });
+
+                // no node? return
+                if (!fileNode) {
+                    return null;
+                }
+
+                // else return the node
+                return fileNode;
+            }
+        })
+    });
+
+    createTypes(`
+
+    input BlurUpOptions {
+        width: Int
+        defaultBase64: String
+        extraTransforms: [String]
+    }
+
+    input ResizeOptions {
+        resize: Resize
+        qualifiers: String
+    }
+
+    input TracedSVGOptions {
+        detail: Float
+        defaultBase64: String
+        numColors: Int
+    }
 
     enum Formats {
         AUTO
@@ -160,18 +243,54 @@ exports.createSchemaCustomization = ({ actions }) => {
         NONE
         TRACED_SVG
     }
+
+    enum Resize {
+        CROP
+        FILL
+        FIT
+        PAD
+        SCALE
+        THUMB
+    }
     `);
 }
 
 exports.createResolvers = ({ createResolvers, reporter }) => {
     createResolvers({
         CloudinaryAsset: {
-            // loadImageData is your custom resolver, defined in step 2
             gatsbyImageData: getGatsbyImageResolver(resolveGatsbyImageData, {
-                Chained: "String",
-                Formats: "[Formats]",
-                Placeholder: "Placeholder",
-                Transformations: "String"
+                blurUpOptions: {
+                    type: `BlurUpOptions`,
+                    description: stripIndent`Custom transformations applied specifically to the base64 Placeholder`,
+                },
+                chained: {
+                    type: "String",
+                    description: stripIndent`Additional transformations to apply as chains following the main transformations`,
+                },
+                formats: {
+                    type: `[Formats]`,
+                    description: stripIndent`An array of the formats to return for the images`,
+                },
+                namedTransformations: {
+                    type: `[String]`,
+                    description: stripIndent`An array of named transformation to apply to an image.`
+                },
+                overrideTransformations: {
+                    type: `[String]`,
+                    description: stripIndent`An array of transformations, will override all other settings except for width and height`
+                },
+                placeholder: {
+                    type: `Placeholder`,
+                    description: stripIndent`The type of placeholder to use whilst the image is loading`
+                },
+                resizeOptions: {
+                    type: `ResizeOptions`,
+                    description: stripIndent`The effect to apply when resizing the image`
+                },
+                tracedSVGOptions: {
+                    type: `TracedSVGOptions`,
+                    description: stripIndent`The effects to apply to the traced svg`
+                },
             }),
         },
     })
@@ -188,14 +307,12 @@ async function createAssetNodeFromFile({
         return;
     }
 
-    reporter.info('creating asset node from file');
+    reporter.verbose('creating asset node from file');
 
     const cloudinaryUploadResult = await uploadImageNodeToCloudinary({
         node,
         reporter,
     });
-
-    reporter.info('uploaded to cloudinary');
 
     const imageNode = createImageNode({
         cloudinaryUploadResult,
@@ -208,15 +325,11 @@ async function createAssetNodeFromFile({
     // Add the new node to Gatsby’s data layer.
     createNode(imageNode);
 
-    reporter.info('created image node');
-
     // Tell Gatsby to add `childCloudinaryAsset` to the parent `File` node.
     createParentChildLink({
         parent: node,
         child: imageNode,
     });
-
-    reporter.info('created parent link');
 
     return imageNode;
 }
@@ -228,8 +341,6 @@ exports.onCreateNode = async ({
     createContentDigest,
     reporter,
 }) => {
-    reporter.info('In on Create Node');
-
 
     // Create nodes from existing data with CloudinaryAssetData node type
     createAssetNodesFromData({
@@ -240,12 +351,8 @@ exports.onCreateNode = async ({
         reporter,
     });
 
-    reporter.info('PluginOptions are: ' + JSON.stringify(pluginOptions));
-
     // Create nodes for files to be uploaded to cloudinary
     if (pluginOptions.apiKey && pluginOptions.apiSecret && pluginOptions.cloudName) {
-        reporter.info('Passing to create asset nodes from file');
-
         await createAssetNodeFromFile({
             node,
             actions,

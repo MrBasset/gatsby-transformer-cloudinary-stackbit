@@ -43,8 +43,8 @@ typings/
 .npm
 
 ## images
-src/images/*
-!src/images/.placeholder
+static/images/*
+!static/images/.placeholder
 
 # Optional eslint cache
 .eslintcache
