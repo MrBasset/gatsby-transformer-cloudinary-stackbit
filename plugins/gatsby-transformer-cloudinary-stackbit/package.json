@@ -1,0 +1,36 @@
+{
+  "name": "gatsby-transformer-cloudinary-stackbit",
+  "version": "0.0.1",
+  "description": "Integrate Cloudinary Assets with Stackbit for sites using gatsby & gatsby-plugin-image",
+  "main": "gatsby-node.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrBasset/gatsby-transformer-cloudinary-stackbit.git"
+  },
+  "author": "Daniel Pool <daniel.pool@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MrBasset/gatsby-transformer-cloudinary-stackbit/issues"
+  },
+  "keywords": [
+    "gatsby",
+    "gatsby-plugin",
+    "image",
+    "cloudinary",
+    "stackbit"
+  ],
+  "homepage": "https://github.com/MrBasset/gatsby-transformer-cloudinary-stackbit#readme",
+  "peerDependencies": {
+    "gatsby-plugin-image": "^1.14.1"
+  },
+  "dependencies": {    
+    "axios": "^0.21.4",
+    "cloudinary": "^1.26.3",
+    "common-tags": "^1.8.0",
+    "fast-json-stable-stringify": "^2.1.0",
+    "fs-extra": "^10.0.0"
+  }
+}
