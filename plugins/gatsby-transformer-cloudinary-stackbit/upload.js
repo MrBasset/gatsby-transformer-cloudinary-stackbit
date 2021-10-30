@@ -109,7 +109,7 @@ exports.uploadImageNodeToCloudinary = async ({ node, reporter }) => {
   return result;
 };
 
-function verifyRequiredOptions(reporter) {
+exports.verifyRequiredOptions = (reporter) => {
   const requiredOptions = ['apiKey', 'apiSecret', 'cloudName'];
   const pluginOptions = getPluginOptions();
   requiredOptions.forEach(optionKey => {

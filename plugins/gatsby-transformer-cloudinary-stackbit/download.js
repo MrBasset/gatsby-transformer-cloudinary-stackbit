@@ -4,6 +4,8 @@ const path = require('path');
 const cloudinary = require('cloudinary').v2;
 const { getPluginOptions } = require('./options');
 
+const { verifyRequiredOptions } = require('./upload');
+
 exports.getAllCloudinaryImages = async(reporter) => {
     const {
         apiKey,
@@ -11,6 +13,8 @@ exports.getAllCloudinaryImages = async(reporter) => {
         cloudName,
         uploadFolder
     } = getPluginOptions();
+
+    verifyRequiredOptions(reporter);
 
     cloudinary.config({
         cloud_name: cloudName,
