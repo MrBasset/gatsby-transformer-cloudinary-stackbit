@@ -25,21 +25,21 @@ const ALLOWED_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
 exports.onPreBootstrap = async ({ reporter }, options ) => {
 
     try {
-    const results = await getAllCloudinaryImages(reporter);
+        const results = await getAllCloudinaryImages(reporter);
 
-    if (results.resources) {
-        results.resources.forEach(async image => {
+        if (results.resources) {
+            results.resources.forEach(async image => {
 
-            const url = getImageURL({
-                public_id: image.public_id,
-                cloudName: options.cloudName,
-                transformations: ['w_275'],
-                format: image.format
+                const url = getImageURL({
+                    public_id: image.public_id,
+                    cloudName: options.cloudName,
+                    transformations: ['w_275'],
+                    format: image.format
+                });
+
+                await downloadFile(url, options.downloadFolder, reporter);
             });
-
-            await downloadFile(url, options.downloadFolder, reporter);
-        });
-    }
+        }
     } catch (error) {
         reporter.panic(JSON.stringify(error));
     }
