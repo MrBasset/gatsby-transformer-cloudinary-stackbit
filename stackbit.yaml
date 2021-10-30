@@ -53,5 +53,5 @@ models:
         const: index
         label: Page Template
         required: true
-        
+        hidden: true
     labelField: title
