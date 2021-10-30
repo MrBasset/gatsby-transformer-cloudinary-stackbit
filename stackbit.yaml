@@ -52,4 +52,6 @@ models:
         name: template
         const: index
         label: Page Template
+        required: true
+        
     labelField: title
