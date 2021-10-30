@@ -41,7 +41,7 @@ exports.onPreBootstrap = async ({ reporter }, options ) => {
         });
     }
     } catch (error) {
-        reporter.panic(error);
+        reporter.panic(JSON.stringify(error);
     }
 }
 
