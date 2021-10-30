@@ -50,5 +50,5 @@ models:
         description: The alt text of the full width image
       - type: string
         name: template
-        
+        constant
     labelField: title
