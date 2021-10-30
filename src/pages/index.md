@@ -7,3 +7,4 @@ constrained_alt: a constrained image
 fullwidth_image: ../../static/images/gatsby-astronaut.png
 fullwidth_alt: a full width image
 template: index
+---
