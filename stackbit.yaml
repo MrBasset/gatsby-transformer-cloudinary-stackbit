@@ -48,6 +48,4 @@ models:
         name: fullwidth_alt
         label: Full width image alt text
         description: The alt text of the full width image
-      - name: ''
-        type: string
     labelField: title
