@@ -18,6 +18,7 @@
 [x] Width is not being added to the cloudinary URL
 
 [ ] Add option to download images from zip file or individually; depending on Cloudinary plan.
+[ ] Throw build panic if cloundinary names are not specified.
 
 ## Stackbit todo
 [x] Pull down thumbnails of all images in the folder and load into images (pre-node creation)
