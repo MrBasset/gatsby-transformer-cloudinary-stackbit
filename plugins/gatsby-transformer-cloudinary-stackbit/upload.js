@@ -12,7 +12,7 @@ exports.uploadImageToCloudinary = async ({
   overwrite,
   reporter,
 }) => {
-  verifyRequiredOptions(reporter);
+  exports.verifyRequiredOptions(reporter);
   const {
     apiKey,
     apiSecret,
