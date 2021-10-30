@@ -51,5 +51,5 @@ models:
       - type: string
         name: template
         const: index
-        label: 
+        label: Page Template
     labelField: title
