@@ -1,7 +1,6 @@
 stackbitVersion: ~0.3.0
-devCommand: ./start.sh {PORT}
+devCommand: ''
 ssgName: gatsby
-ssgVersion: 2.3.30
 nodeVersion: 16
 buildCommand: npm run build
 publishDir: public
@@ -9,15 +8,15 @@ staticDir: static
 uploadDir: images
 pagesDir: src/pages
 pageLayoutKey: template
+cmsName: git
 models:
   home:
     type: page
     label: Home
     file: index.md
     singleInstance: true
-    # the urlPath and filePath can be static
-    urlPath: "/"
-    filePath: "index.md"
+    urlPath: /
+    filePath: index.md
     fields:
       - type: string
         name: title
