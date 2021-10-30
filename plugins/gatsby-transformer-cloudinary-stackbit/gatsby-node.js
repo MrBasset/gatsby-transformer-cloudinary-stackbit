@@ -40,7 +40,9 @@ exports.onPreBootstrap = async ({ reporter }, options ) => {
             await downloadFile(url, options.downloadFolder, reporter);
         });
     }
-    } catch (error)
+    } catch (error) {
+        reporter.panic(error);
+    }
 }
 
 const generateImageSource = (baseURL, width, height, format, fit, options) => {
