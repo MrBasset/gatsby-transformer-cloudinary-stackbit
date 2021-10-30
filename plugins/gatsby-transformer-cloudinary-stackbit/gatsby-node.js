@@ -24,7 +24,7 @@ const ALLOWED_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
 
 exports.onPreBootstrap = async ({ reporter }, options ) => {
 
-    try {}
+    try {
     const results = await getAllCloudinaryImages(reporter);
 
     if (results.resources) {
