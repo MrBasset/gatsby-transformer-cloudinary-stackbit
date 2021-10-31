@@ -1,4 +1,8 @@
-## Thoughts
+## Current
+[ ] Get editing working in Stackbit
+[ ] Stop regenerating images when creating Stackbit container (this is going to generate massive costs)
+
+## Plugin Todo
 
 [x] Get plugin working with Cloudinary and Gatsby Image
 [x] Sort out passing additional options to plugin for Cloudinary Support. Missing Parameters
@@ -13,21 +17,25 @@
 [x] Fix dominant colour
 [x] Implement Traced SVG
 [x] Implement fit for images
-[n/a] Fix Breakpoints - seems to be ignored by gatsby image
+[n/a] Fix Breakpoints - seems to be ignored by gatsby image. Maybe remove this from the function?
 [x] Images are not scaling with changes to width and vice versa
 [x] Width is not being added to the cloudinary URL
 
 [ ] Add option to download images from zip file or individually; depending on Cloudinary plan.
-[ ] Throw build panic if cloundinary names are not specified.
+[x] Throw build panic if cloundinary names are not specified.
+[ ] Can we take data from frontmatter an pass these to GraphQL queries - I think that this could be done with a totally custom resolver.
+[ ] During plugin startup, all Images are downloaded, and then re-uploaded to Cloudinary by the node watcher. Need to have some sort of state that is managed here.
+
+[ ] How does Gatsby resolve that a node is a file? We are doing a lookup on the URL to see if it exists and making this a file. Stackbit will record the path in relation to the image directory (so image/example.jpg), we will need to ensure that this is translated to being a File node. The absolutefilepath is what I've used for Schema extension, but I don't want to force people to have to full define the schema.
 
 ## Stackbit todo
 [x] Pull down thumbnails of all images in the folder and load into images (pre-node creation)
-[ ] Configure demo site as a stackbit site
+[x] Configure demo site as a stackbit site
 [x] Figure out how derrived images work => The first time a transformation takes place, an image is derrived from it. Following that further requests are free.
-[ ] For any images added, we need to replace these with the thumbnail version (do we, they'll eventually be replaced on start up when the container restarts - so we could just go with the upload thing and be done with it)
+[ ] For any images added, we need to replace these with the thumbnail version (do we? they'll eventually be replaced on start up when the container restarts - so we could just go with the upload thing and be done with it)
 [ ] For any images added, when we upload also create an eager/derived image that represents the stackbit thumbnail size
-[ ] Can we create derived images as they are requested? => yes, but not if we want to implement the private uploads and static transformations.
-[ ] How can we do the base64 - can we download files? => use gatsby-cache for base64 and tracedSVG
+[ ] Can we create derived images as they are requested? => yes, but not if we want to implement the private uploads and static transformations. Could we create a custom image control that uses the API keys to request the derived image as part of the rendering. Will need to work in the SSR as well as the dev, so maybe not the best idea in case we leak the api secret?
+[ ] How can we do the base64 - can we download files? => use gatsby-cache for base64 and tracedSVG. Problem is how to get access to the Gatsby cache outside of select API methods?
 [ ] Figure out how to pass the reporter to the image plugin functions.
 [ ] Look to implement private uploads and strict transforms to prevent access to the original image or requests generating an undue cost. This will mean that all images will need to be eagerly generated. In that regard, when creating nodes for an asset, we'll need to work out how many queries refence the image (is that possible) and then eagerly generate any transformations for that image. This way they will all be processed ahead of the game and dealt with upfront, leaving the only variable cost as the download bandwidth and storage costs.
 
@@ -37,8 +45,8 @@ However, we are going to have to solve marking an image as processed - cache I g
 
 ## initial import
 
-## caching improvements todo
-[ ] can we save our cache/images to AWS S3 to make for a faster start-up?
+## caching improvements thoughts
+[ ] can we save our gatsby cache/images to AWS S3 or similar to make for a faster start-up in stackbit studio?
 
 
 
@@ -47,18 +55,3 @@ However, we are going to have to solve marking an image as processed - cache I g
 
 
 
-
-Can I use a combination of gatsby-transformer-cloudinary and a seperate plug-in to achive what I need?
-
-gatsby-transformer-cloudinary-stackbit - purpose when starting up, will fetch all assets in Cloudinary with the derived name t_media_lib_thumb as an archive and expand into the src/images so that a) gatsby-transformer-cloudinary can be used to fetch images from the conventional assets and b) the stackbit media library will still work.
-
-Problems:
- * gatsby-transformer-cloudinary doesn't support gatsby-plugin-image
- * will need to catch images that are being uploaded and replace this with the thumbnail without triggering another upload.
- * base64 - this can take a long time to generate. Think of a way to put this into gatsby a different way, maybe <image_id>.base64 file that is then sourced by this plug-in and x-ref'd to the CloudinaryAsset object
-
- * we need to find a way to either persist the cache, or not call the uploadImage if the cache has been cleared due to the stackbit container restarting. This is to avoid the expense from repeatedly uploading/transforming images in Cloudinary. Thoughts
-    - Use the base64 file hack as a means to indicate that an image has been uploaded.
-    - Have some sort of sidecar file that tracks the files
-    - Introduce some sort of plug-in that will upload/download the gatsby cache to S3 or some other form of storage so that we can persist between container starts.
-    - The Cloudinary admin API to get dominant color is rate limited, may need to save the result of this locally as well.
