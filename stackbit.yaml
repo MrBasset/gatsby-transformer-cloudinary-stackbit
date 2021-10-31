@@ -2,7 +2,7 @@
 # To learn more about stackbit.yaml please visit https://www.stackbit.com/docs/stackbit-yaml/
 stackbitVersion: ~0.3.0
 ssgName: gatsby
-nodeVersion: 16.3.0
+nodeVersion: '16.3.0'
 buildCommand: npm run build
 publishDir: public
 staticDir: static
