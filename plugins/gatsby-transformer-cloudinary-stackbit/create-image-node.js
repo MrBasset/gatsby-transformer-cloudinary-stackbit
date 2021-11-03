@@ -81,6 +81,9 @@ exports.createImageNode = ({
       // Gatsby uses the content digest to decide when to reprocess a given
       // node. We can use the Cloudinary URL to avoid doing extra work.
       contentDigest: createContentDigest(fingerprint),
+
+      //don't include the media type, gatsby attempts to transform the node multiple times.
+      //mediaType: `image/${format}`
     },
   };
 

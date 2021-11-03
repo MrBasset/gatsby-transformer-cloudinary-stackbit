@@ -23,7 +23,7 @@ exports.getAllCloudinaryImages = async(reporter) => {
     });
 
     try {
-        return await cloudinary.api.resources({ prefix: uploadFolder, resource_type: 'image', type: 'upload' });
+        return await cloudinary.api.resources({ prefix: uploadFolder, resource_type: 'image', type: 'upload', metadata: true });
     }
     catch (error) {
         reporter.error(error);
@@ -49,11 +49,17 @@ exports.downloadFile = async (fileUrl, downloadFolder, reporter) => {
         url: fileUrl,
         responseType: 'stream',
       });
+
+      //do some logging to see if we can get the eTag
+      reporter.verbose('Download Response' + JSON.stringify(response.headers));
   
       const w = response.data.pipe(fs.createWriteStream(localFilePath));
       w.on('finish', () => {
         reporter.info(`Successfully downloaded file ${localFilePath}`);
       });
+
+      return response.headers;
+
     } catch (err) {
       reporter.error(err);
     }

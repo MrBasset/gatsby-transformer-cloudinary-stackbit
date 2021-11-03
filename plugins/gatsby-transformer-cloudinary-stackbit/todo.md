@@ -20,11 +20,12 @@
 [n/a] Fix Breakpoints - seems to be ignored by gatsby image. Maybe remove this from the function?
 [x] Images are not scaling with changes to width and vice versa
 [x] Width is not being added to the cloudinary URL
+[ ] Add more detail for the descriptions, including options, to the extended resolver for the CloudinaryAsset::gatsbyImageData function
 
 [ ] Add option to download images from zip file or individually; depending on Cloudinary plan.
 [x] Throw build panic if cloundinary names are not specified.
 [ ] Can we take data from frontmatter an pass these to GraphQL queries - I think that this could be done with a totally custom resolver.
-[ ] During plugin startup, all Images are downloaded, and then re-uploaded to Cloudinary by the node watcher. Need to have some sort of state that is managed here.
+[x] During plugin startup, all Images are downloaded, and then re-uploaded to Cloudinary by the node watcher. Need to have some sort of state that is managed here.
 
 [ ] How does Gatsby resolve that a node is a file? We are doing a lookup on the URL to see if it exists and making this a file. Stackbit will record the path in relation to the image directory (so image/example.jpg), we will need to ensure that this is translated to being a File node. The absolutefilepath is what I've used for Schema extension, but I don't want to force people to have to full define the schema.
 
@@ -47,6 +48,13 @@ However, we are going to have to solve marking an image as processed - cache I g
 
 ## caching improvements thoughts
 [ ] can we save our gatsby cache/images to AWS S3 or similar to make for a faster start-up in stackbit studio?
+
+
+[ ] save the fact that we have just downloaded an image to the gatsby cache (use this to prevent attempting to re-upload the image)
+[ ] 
+
+
+[ ] Figure out how to expire the image, the etag in cloudinary has an md5 hash for the image. Can we grab this and put this into the cache?
 
 
 

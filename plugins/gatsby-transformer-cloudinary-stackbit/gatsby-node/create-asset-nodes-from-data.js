@@ -11,7 +11,6 @@ exports.createAssetNodesFromData = ({
   createContentDigest,
   reporter
 }) => {
-  reporter.verbose(`In createAssetNodesFromData for node:` + JSON.stringify(node));
 
   const assetDataPaths = getAssetDataPaths({ node });
   assetDataPaths.forEach(assetDataPath => {
