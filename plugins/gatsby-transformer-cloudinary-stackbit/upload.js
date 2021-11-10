@@ -6,6 +6,79 @@ let uploadedImages = 0;
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 
+exports.getAllTransformations = async (
+  reporter
+) => {
+  exports.verifyRequiredOptions(reporter);
+  const {
+    apiKey,
+    apiSecret,
+    cloudName
+  } = getPluginOptions();
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  });
+
+  try {
+    return await cloudinary.api.transformations({max_results: 500, named: true});
+  } catch (error) {
+    reporter.panic('An error occurred: '+JSON.stringify(error));
+  }
+}
+
+exports.updateNamedTransformation = async (
+  name,
+  transformations,
+  reporter
+) => {
+  exports.verifyRequiredOptions(reporter);
+  const {
+    apiKey,
+    apiSecret,
+    cloudName
+  } = getPluginOptions();
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  });
+
+  try {
+    await cloudinary.api.update_transformation(name, transformations);
+  } catch (error) {
+    reporter.panic('An error occurred: '+JSON.stringify(error));
+  }
+}
+
+exports.createNamedTransformation = async (
+  name,
+  transformations,
+  reporter
+) => {
+  exports.verifyRequiredOptions(reporter);
+  const {
+    apiKey,
+    apiSecret,
+    cloudName
+  } = getPluginOptions();
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  });
+
+  try {
+    await cloudinary.api.create_transformation(name, transformations);
+  } catch (error) {
+    reporter.panic('An error occurred: '+JSON.stringify(error));
+  }
+}
+
 exports.uploadImageToCloudinary = async ({
   url,
   publicId,

@@ -43,8 +43,8 @@ typings/
 .npm
 
 ## images
-static/images/*
-!static/images/.placeholder
+cloudinary/images/*
+!cloudinary/images/.placeholder
 
 # Optional eslint cache
 .eslintcache

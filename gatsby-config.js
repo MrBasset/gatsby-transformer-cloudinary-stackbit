@@ -16,7 +16,7 @@ module.exports = {
       resolve: `gatsby-source-filesystem`,
       options: {
         name: `images`,
-        path: `${__dirname}/static/images`,
+        path: `${__dirname}/cloudinary/images`,
       },
     },
     {
@@ -33,7 +33,11 @@ module.exports = {
         apiKey: process.env.CLOUDINARY_API_KEY,
         apiSecret: process.env.CLOUDINARY_API_SECRET,
         uploadFolder: 'plugin-test',
-        downloadFolder: `${__dirname}/static/images`,
+        downloadFolder: `${__dirname}/cloudinary/images`,
+        archive_enabled: true,
+        namedTransformations: [
+          { name: 'tcs_watermark', transformations: 'c_scale,g_south_east,l_tcs-logo,o_40,w_100/e_cut_out,g_south_west,l_text:Arial_12_bold:© Timothy Christian School,x_10,y_10'}
+        ]
       },
     },
     `gatsby-transformer-remark`,
@@ -48,7 +52,7 @@ module.exports = {
     //     // https://css-tricks.com/meta-theme-color-and-trickery/
     //     // theme_color: `#663399`,
     //     display: `minimal-ui`,
-    //     icon: `static/images/gatsby-icon.png`, // This path is relative to the root of the site.
+    //     icon: `cloudinary/images/gatsby-icon.png`, // This path is relative to the root of the site.
     //   },
     // },
     // this (optional) plugin enables Progressive Web App + Offline functionality

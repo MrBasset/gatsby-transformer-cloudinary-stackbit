@@ -25,6 +25,21 @@ exports.onCreateNode = ({ node, actions, getNode }) => {
     }
 }
 
+exports.createSchemaCustomization = ({ actions }) => {
+  const { createTypes } = actions
+  const typeDefs = `
+    type MarkdownRemark implements Node {
+      frontmatter: Frontmatter
+    }
+    type Frontmatter {
+      fixed_image: File @CloudinaryAsset
+      constrained_image: File @CloudinaryAsset
+      fullwidth_image: File @CloudinaryAsset
+    }
+  `
+  createTypes(typeDefs)
+}
+
 exports.createPages = ({ actions, graphql }) => {
     const { createPage } = actions
 

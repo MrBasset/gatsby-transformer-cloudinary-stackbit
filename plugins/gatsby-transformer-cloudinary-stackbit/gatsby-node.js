@@ -7,59 +7,114 @@ const {
 const { setPluginOptions, getPluginOptions } = require('./options');
 const pluginOptions = getPluginOptions();
 
+const path = require('path');
 const { generateImageData } = require('gatsby-plugin-image');
 
 const { stripIndent } = require("common-tags");
 
-const { uploadImageNodeToCloudinary } = require('./upload');
+const { uploadImageNodeToCloudinary, createNamedTransformation, updateNamedTransformation, getAllTransformations } = require('./upload');
 const { createImageNode } = require('./create-image-node');
 const {
     createAssetNodesFromData,
 } = require('./gatsby-node/create-asset-nodes-from-data');
 
-const { getAllCloudinaryImages, downloadFile } = require('./download');
+const { getAllCloudinaryImages, downloadFile, downloadArchive } = require('./download');
 
 const ALLOWED_MEDIA_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
+
+const findTransformation = (transformations, name) => {
+    for(const t of transformations) {
+        if (t.name == `t_${name}`) return true;
+    }
+    return false;
+}
+
+const STACKBIT_THUMBNAIL = 'stackbit_thumbnail'
 
 exports.onPreBootstrap = async ({ reporter, cache }, options) => {
 
     try {
-        const results = await getAllCloudinaryImages(reporter);
 
-        if (results.resources) {
-            for (const image of results.resources) {
+        reporter.info('Creating named transformations');
+        const namedTransformations = [
+            {
+                name: STACKBIT_THUMBNAIL,
+                transformations: 'w_224,h_173,c_limit,q_auto'
+            },
+            ...options.namedTransformations
+        ];
 
-                const url = getImageURL({
-                    public_id: image.public_id,
-                    cloudName: options.cloudName,
-                    transformations: ['w_224', 'h_173', "c_fit"],
-                    format: image.format
-                });
+        const existingTransformations = await getAllTransformations();
 
-                const cacheKey = `${options.cloudName}::${image.public_id}`;
+        for(const namedTran of namedTransformations) {
+            //does the transformation exist already?
+            if(findTransformation(existingTransformations.transformations, namedTran.name)) await updateNamedTransformation(namedTran.name, namedTran.transformations, reporter);
+            else await createNamedTransformation(namedTran.name, namedTran.transformations, reporter);
+        }
 
-                const cached = await cache.get(cacheKey);
-                //don't bother downloading the image, we have it cached already (may need to review this)
-                if (!!cached) continue;
+        /*
+         * TODO: the get resources API will hand back the assets in batches of 500. The archive, 
+         * if enabled, can hand back 1000 original assets, or 5000 derived assets.
+         * 
+         * For now work on the principle that 5000 assets is enough.
+         * 
+         * We'll need to iterate through the returned assets creating new nodes where they are required and in cache.
+         * However, all the images will need to be downloaded (unless you want to put them into S3 as well?)
+         */
 
-                const headers = await downloadFile(url, options.downloadFolder, reporter);
+        if(options.archive_enabled) {
+            reporter.info('Archive downloading enabled')
+            await downloadArchive(options.downloadFolder, { transformations: `t_${STACKBIT_THUMBNAIL}` }, reporter);
+        }
+        else {
+            reporter.info('Downloading individual images');
+        }
 
-                const cachedCloudinaryImage = {
-                    etag: headers?.etag,
-                    url: url,
-                    cloudName: options.cloudName,
-                    public_id: image.public_id,
+        let next_cursor, loop = true;
+        while (loop) {
+            const results = await getAllCloudinaryImages(reporter, next_cursor);
 
-                    responsive_breakpoints: [],
-                    version: image.version,
-                    height: image.height,
-                    width: image.width,
-                    format: image.format,
+            if(results.next_cursor) next_cursor = results.next_cursor;
+            else loop = false;
+
+            if (results.resources) {
+                for (const image of results.resources) {
+
+                    const url = getImageURL({
+                        public_id: image.public_id,
+                        cloudName: options.cloudName,
+                        transformations: [`t_${STACKBIT_THUMBNAIL}`],
+                        format: image.format
+                    });
+
+                    const cacheKey = `${options.cloudName}::${image.public_id}`;
+
+                    const cached = await cache.get(cacheKey);
+                    //don't bother downloading the image, we have it cached already (may need to review this)
+                    if (!!cached) continue;
+
+                    let headers;
+                    if(!options.archive_enabled) {
+                        headers = await downloadFile(url, options.downloadFolder, reporter);
+                    }
+
+                    const cachedCloudinaryImage = {
+                        etag: headers?.etag,
+                        url: url,
+                        cloudName: options.cloudName,
+                        public_id: image.public_id,
+
+                        responsive_breakpoints: [],
+                        version: image.version,
+                        height: image.height,
+                        width: image.width,
+                        format: image.format,
+                    }
+
+                    reporter.info(`Caching downloaded image with key (${cacheKey}) as: ` + JSON.stringify(cachedCloudinaryImage));
+
+                    await cache.set(cacheKey, cachedCloudinaryImage);
                 }
-
-                reporter.info(`Caching downloaded image with key (${cacheKey}) as: ` + JSON.stringify(cachedCloudinaryImage));
-
-                await cache.set(cacheKey, cachedCloudinaryImage);
             }
         }
     } catch (error) {
@@ -87,26 +142,30 @@ const generateImageSource = (baseURL, width, height, format, fit, options) => {
     return { src, width, height, format }
 }
 
-exports.createSchemaCustomization = ({ actions }) => {
+exports.createSchemaCustomization = ({ actions, reporter }) => {
 
     const { createTypes, createFieldExtension } = actions
 
     createFieldExtension({
-        name: 'fileByAbsolutePath',
+        name: 'CloudinaryAsset',
         extend: (options, prevFieldConfig) => ({
             resolve: function (src, args, context, info) {
 
                 // look up original string, i.e img/photo.jpg
                 const { fieldName } = info
                 const partialPath = src[fieldName]
+
                 if (!partialPath) {
                     return null
                 }
 
+                const { downloadFolder } = pluginOptions;
+                const arr = downloadFolder.split("/");
+                const basePath = arr.slice(0, arr.length-1).join("/");
+
                 // get the absolute path of the image file in the filesystem
                 const filePath = path.join(
-                    __dirname,
-                    'static',
+                    basePath,
                     partialPath
                 )
 
