@@ -1,7 +1,7 @@
 const axios = require('axios');
 const fs = require('fs-extra');
 
-var tar = require('tar');
+const tar = require('tar');
 
 const path = require('path');
 const cloudinary = require('cloudinary').v2;

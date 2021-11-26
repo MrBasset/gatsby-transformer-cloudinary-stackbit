@@ -99,7 +99,7 @@ exports.onPreBootstrap = async ({ reporter, cache }, options) => {
                     }
 
                     const cachedCloudinaryImage = {
-                        etag: headers?.etag,
+                        //etag: headers?.etag,
                         url: url,
                         cloudName: options.cloudName,
                         public_id: image.public_id,

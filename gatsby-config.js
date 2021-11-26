@@ -40,6 +40,15 @@ module.exports = {
         ]
       },
     },
+    {
+      resolve: require.resolve(`${__dirname}/plugins/gatsby-plugin-googlecache`),
+      options: {
+        localCachePath: `${__dirname}/.cache`,
+        remoteDirectory: '.gatsby-cache',
+        email: process.env.OAUTH_EMAIL,
+        key: process.env.OAUTH_KEY
+      },
+    },
     `gatsby-transformer-remark`,
     // {
     //   resolve: `gatsby-plugin-manifest`,
