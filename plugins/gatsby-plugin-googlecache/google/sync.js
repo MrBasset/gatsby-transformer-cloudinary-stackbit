@@ -53,6 +53,13 @@ const downloadAndExtractTar = async (file, destFolder, reporter) => {
                       strip: 1
                     })
                 );
+
+                
+
+                //logging for debugging in stackbit
+                const files = await fs.readdir(destFolder);
+                reporter.info(`Got the files in ${destFolder}: `+JSON.stringify(files))
+
                 resolve({
                     file: filePath,
                     fileId: fileId,
