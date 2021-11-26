@@ -1,13 +1,21 @@
 stackbitVersion: ~0.3.0
 ssgName: gatsby
 nodeVersion: 16
-buildCommand: npm run build
+buildCommand: gatsby build
+devCommand: gatsby develop
 publishDir: public
-staticDir: static
-uploadDir: images
+assets: 
+  referenceType: relative
+  assetsDir: cloudinary
+  uploadDir: images
 pagesDir: src/pages
 pageLayoutKey: template
 cmsName: git
+logicFields:
+  - home.template
+  - home.fixed_image
+  - home.constrained_image
+  - home.fullwidth_image
 models:
   home:
     type: page
