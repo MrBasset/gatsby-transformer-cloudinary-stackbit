@@ -121,6 +121,10 @@ exports.downloadArchive = async(downloadFolder, options, reporter) => {
       strip: 1
     })
   );
+
+  //logging for debugging in stackbit
+  const files = await fs.readdir(downloadFolder);
+  reporter.info(`Got the files in ${downloadFolder}: `+JSON.stringify(files))
 }
 
 exports.downloadFile = async (fileUrl, downloadFolder, reporter) => {
