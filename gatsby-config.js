@@ -44,7 +44,8 @@ module.exports = {
       resolve: require.resolve(`${__dirname}/plugins/gatsby-plugin-googlecache`),
       options: {
         localCachePath: `${__dirname}/.cache`,
-        remoteDirectory: '.gatsby-cache',
+        localPublicPath: `${__dirname}/public`,
+        remoteDirectory: '.gatsby',
         email: process.env.OAUTH_EMAIL,
         key: process.env.OAUTH_KEY
       },

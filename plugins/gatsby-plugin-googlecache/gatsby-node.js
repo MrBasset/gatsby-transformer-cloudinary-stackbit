@@ -1,9 +1,10 @@
-const { syncDown, authenticate, watch } = require('./google/sync');
+const { syncDown, authenticate, watch, CACHE_TAR, PUBLIC_TAR } = require('./google/sync');
 
 exports.onPreInit = async ({emitter, reporter}, pluginOptions) => {
   const {
-    localCachePath,
-    remoteDirectory,
+    localCachePath = ".cache",
+    localPublicPath = "public",
+    remoteDirectory = "gatsby",
     email,
     key
   } = pluginOptions;
@@ -16,15 +17,29 @@ exports.onPreInit = async ({emitter, reporter}, pluginOptions) => {
   //sync from google to pull down the remote content locally - the assumption is that the cache will be empty and so we just pull in what is there
   reporter.info('Pulling down cache from Google');
   await authenticate(keyfile, reporter);
-  const folderId = await syncDown(localCachePath, remoteDirectory, reporter);
+  const { cacheFolderId, cacheFileId } = await syncDown(localCachePath, CACHE_TAR, remoteDirectory, reporter);
+  const { publicFolderId, publicFileId } = await syncDown(localPublicPath, PUBLIC_TAR, remoteDirectory, reporter);
+
+  if (cacheFolderId !== publicFolderId) reporter.panic(`Remote folder error, ${cacheFolderId} !== ${publicFolderId}`)
+
+  reporter.info(`Got the folderId ${cacheFolderId} and the cacheFileId ${cacheFileId} and the publicFileId ${publicFileId}.`);
 
   //set up a file watcher to keep the cache in sync, pushing local files up to google.
-  watch(emitter, localCachePath, remoteDirectory, folderId, reporter, pluginOptions);
+  watch(emitter, { 
+    localCachePath,
+    localPublicPath,
+    remoteDirectory, 
+    folderId: cacheFolderId, 
+    cacheFileId,
+    publicFileId },
+    reporter, pluginOptions);
 }
 
 exports.pluginOptionsSchema = ({ Joi }) => {
   return Joi.object({
     localCachePath:     Joi.string()
+                           .required(),
+    localPublicPath:    Joi.string()
                            .required(),
     remoteDirectory:    Joi.string()
                            .required(),

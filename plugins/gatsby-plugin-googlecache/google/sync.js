@@ -9,7 +9,8 @@ const tar = require('tar');
 
 const _ = require('lodash');
 
-const CACHE_TAR = `cache.tar.gz`
+exports.CACHE_TAR = `cache.tar.gz`
+exports.PUBLIC_TAR = `public.tar.gz`
 
 const downloadAndExtractTar = async (file, destFolder, reporter) => {
     const filePath = path.join(process.cwd(), file.name);
@@ -163,9 +164,9 @@ const createFolder = async (name, reporter) => {
     }
 }
 
-const uploadFile = async (localPath, remotePath, folderId, reporter) => {
+const uploadFile = async (localPath, remotePath, folderId, fileId, reporter) => {
     try {
-        reporter.info(`uploading file ${localPath} to ${remotePath}`);
+        reporter.info(`uploading file ${localPath} to ${remotePath}, with fileId ${fileId} and parentId ${folderId}.`);
 
         const fileSize = fs.statSync(localPath).size;
 
@@ -173,30 +174,55 @@ const uploadFile = async (localPath, remotePath, folderId, reporter) => {
             'name': remotePath,
             parents: [ folderId ]
         };
+
         var media = {
             mimeType: mime.lookup(localPath) || 'application/octet-stream',
             body: fs.createReadStream(localPath)
         };
-        return await drive.files.create({
-            resource: fileMetadata,
-            media: media,
-            fields: 'id'
-        },
-        { 
-            maxRedirects: 0, //work around the stream backpressure issue
-            onUploadProgress: (evt) => {
-                const progress = (evt.bytesRead / fileSize) * 100;
-                reporter.info(`Uploaded ${progress}%`);
-            }
-        }); 
+
+        //because these are class methods I can't use a function reference on a test, there are internal context params that aren't available with a function reference.
+        //const funct = !!fileId ? drive.files.update : drive.files.create;
+
+        //have to use a horrible if/then instead
+        if (!!fileId)
+          return await drive.files.update({
+              resource: {
+                id: fileId,
+                ...fileMetadata
+              },
+              media: media,
+              fields: 'id'
+          },
+          { 
+              maxRedirects: 0, //work around the stream backpressure issue
+              onUploadProgress: (evt) => {
+                  const progress = (evt.bytesRead / fileSize) * 100;
+                  reporter.info(`Uploaded ${progress}%`);
+              }
+          });
+        else
+          return await drive.files.create({
+              resource: fileMetadata,
+              media: media,
+              fields: 'id'
+          },
+          { 
+              maxRedirects: 0, //work around the stream backpressure issue
+              onUploadProgress: (evt) => {
+                  const progress = (evt.bytesRead / fileSize) * 100;
+                  reporter.info(`Uploaded ${progress}%`);
+              }
+          });
+
     } catch (error) {
+        console.log(error);
         reporter.error('Received an error uploading a file: '+JSON.stringify(error));
     }
 }
 
-const uploadFileOrFolder = async (pathType, localPath, remotePath, folderId = null, reporter) => {
+const uploadFileOrFolder = async (pathType, localPath, remotePath, folderId = null, fileId = null, reporter) => {
     if (pathType === 'directory') await createFolder(remotePath, reporter);
-    else await uploadFile(localPath, remotePath, folderId, reporter);
+    else await uploadFile(localPath, remotePath, folderId, fileId, reporter);
 }
 
 let drive;
@@ -226,7 +252,7 @@ exports.authenticate = async(keyfile, reporter) => {
     }
 }
 
-exports.syncDown = async (localPath, remotePath, reporter) => {
+exports.syncDown = async (localPath, filename, remotePath, reporter) => {
     try {
         let cacheFolder = await findFileOrFolder('directory', remotePath, null, reporter);
 
@@ -237,7 +263,7 @@ exports.syncDown = async (localPath, remotePath, reporter) => {
 
         await listFolder(cacheFolder.id, reporter);
 
-        const tarFile = await findFileOrFolder ('file', CACHE_TAR, cacheFolder.id, reporter);
+        const tarFile = await findFileOrFolder ('file', filename, cacheFolder.id, reporter);
         reporter.info('found tar: '+JSON.stringify(tarFile));
 
         if (!!tarFile) {
@@ -245,17 +271,17 @@ exports.syncDown = async (localPath, remotePath, reporter) => {
             await downloadAndExtractTar(tarFile, localPath, reporter);
         } else reporter.warn('Not found a remote cache');
 
-        return cacheFolder.id;
+        return { folderId: cacheFolder.id, fileId: tarFile ? tarFile.id : null };
 
     } catch (error) {
         reporter.error('An error occurred downloading the Tar'+JSON.stringify(error));
     }
 }
 
-const rebuildTar = async (localCachePath, reporter) => {
+const rebuildTar = async (localCachePath, filename, reporter) => {
     try {
-        reporter.info(`Rebuilding ${CACHE_TAR} from the contents of ${localCachePath}`);
-        const tarFile = path.resolve(process.cwd(), CACHE_TAR);
+        reporter.info(`Rebuilding ${filename} from the contents of ${localCachePath}`);
+        const tarFile = path.resolve(process.cwd(), filename);
 
         await tar.c({
             gzip: true,
@@ -270,15 +296,17 @@ const rebuildTar = async (localCachePath, reporter) => {
     }
 }
 
-const refreshAndUploadTar = async(localCachePath, remoteCachePath, folderId, reporter) => {
-    reporter.info(`Refeshing tar file, have the params ${localCachePath} and ${remoteCachePath}`);
-    const tarFile = await rebuildTar(localCachePath, reporter);
+const refreshAndUploadTar = async(filename, localPath, remotePath, folderId, fileId, reporter) => {
+    reporter.info(`Refeshing tar file, have the params ${localPath} and ${remotePath}`);
 
-    reporter.info(`Got the new tar file ${tarFile} and the remote name ${CACHE_TAR}`)
-    await uploadFileOrFolder('file', tarFile, CACHE_TAR, folderId, reporter);
+    const tarFile = await rebuildTar(localPath, filename, reporter);
+
+    reporter.info(`Got the new tar file ${tarFile} and the remote name ${filename}`)
+    await uploadFileOrFolder('file', tarFile, filename, folderId, fileId, reporter);
 }
 
-const refreshAndUploadTarDebounced = _.debounce(async (localCachePath, remoteCachePath, folderId, reporter) => await refreshAndUploadTar(localCachePath, remoteCachePath, folderId, reporter), 5000);
+const DEBOUNCE_MS = 5000;
+const refreshAndUploadTarDebounced = _.debounce(async (filename, localPath, remotePath, folderId, fileId, reporter) => await refreshAndUploadTar(filename, localPath, remotePath, folderId, fileId, reporter), DEBOUNCE_MS);
 
 /**
  * Shamelessly swipped from gatsby-source-filesystem; all credit goes to them.
@@ -287,13 +315,16 @@ const refreshAndUploadTarDebounced = _.debounce(async (localCachePath, remoteCac
  * Create a state machine to manage Chokidar's not-ready/ready states.
  */
 const createFSMachine = (
-    localCachePath,
-    remoteCachePath,
+    localCachePath, 
+    localPublicPath,
+    remotePath,
     folderId,
+    cacheFileId,
+    publicFileId,
     reporter,
   ) => {
 
-    reporter.info(`Setting up file watch on folder ${localCachePath} pushing to ${remoteCachePath}`);
+    reporter.info(`Setting up file watch on folders ${localCachePath} and ${localPublicPath} pushing to ${remotePath}`);
    
     const log = expr => (ctx, action, meta) => {
       if (meta.state.matches(`BOOTSTRAP.BOOTSTRAPPED`)) {
@@ -365,10 +396,32 @@ const createFSMachine = (
       {
         actions: {
           async refreshAndUploadTarDebounced(_, { pathType, path }) {
-            await refreshAndUploadTarDebounced(localCachePath, remoteCachePath, folderId, reporter);
+
+            let fileId = cacheFileId;
+            let localPath = localCachePath;
+            let filename = exports.CACHE_TAR;
+
+            if (path.startsWith(localPublicPath)) {
+              fileId = publicFileId;
+              localPath = localPublicPath
+              filename = exports.PUBLIC_TAR;
+            }
+
+            await refreshAndUploadTarDebounced(filename, localPath, remotePath, folderId, fileId, reporter);
           },
           async refreshAndUploadTar(_, { pathType, path }) {
-            await refreshAndUploadTar(localCachePath, remoteCachePath, folderId, reporter);
+
+            let fileId = cacheFileId;
+            let localPath = localCachePath;
+            let filename = CACHE_TAR;
+
+            if (path.startsWith(localPublicPath)) {
+              fileId = publicFileId;
+              localPath = localPublicPath
+              filename = PUBLIC_TAR;
+            }
+
+            await refreshAndUploadTar(filename, localPath, remotePath, folderId, fileId, reporter);
           },
         },
       }
@@ -376,7 +429,17 @@ const createFSMachine = (
     return interpret(fsMachine).start()
   }
 
-exports.watch = async (emitter, localCachePath, remoteCachePath, folderId, reporter, options) => {
+exports.watch = async (emitter, props, reporter, options) => {
+
+  const { 
+    localCachePath,
+    localPublicPath,
+    remoteDirectory, 
+    folderId, 
+    cacheFileId,
+    publicFileId 
+  } = props;
+
   // Validate that the path exists.
   if (!fs.existsSync(localCachePath)) {
     reporter.panic(`
@@ -392,9 +455,24 @@ Please pick a path to an existing directory.
     localCachePath = path.resolve(process.cwd(), localCachePath)
   }
 
+  // Validate that the path exists.
+  if (!fs.existsSync(localPublicPath)) {
+    reporter.panic(`
+The path passed to gatsby-plugin-googlecache does not exist on your file system:
+${localPublicPath}
+Please pick a path to an existing directory.
+      `)
+  }
+
+  // Validate that the path is absolute.
+  // Absolute paths are required to resolve images correctly.
+  if (!path.isAbsolute(localPublicPath)) {
+    localPublicPath = path.resolve(process.cwd(), localPublicPath)
+  }
+
   reporter.info('this 1')
 
-  const fsMachine = createFSMachine(localCachePath, remoteCachePath, folderId, reporter)
+  const fsMachine = createFSMachine(localCachePath, localPublicPath, remoteDirectory, folderId, cacheFileId, publicFileId, reporter)
 
   reporter.info('this 2')
 
@@ -406,7 +484,7 @@ Please pick a path to an existing directory.
 
   reporter.info('this 3')
 
-  const watcher = chokidar.watch(localCachePath, {
+  const watcher = chokidar.watch([localCachePath, localPublicPath], {
     ignored: [
       `**/*.un~`,
       `**/.DS_Store`,
