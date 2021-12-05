@@ -4,11 +4,9 @@ const fs = require('fs-extra');
 const path = require('path');
 const S3SyncClient = require('s3-sync-client');
 const Uniqueue = require('uniqueue');
-const { push, pop, remaining, queued, processed, clear } = new Uniqueue();
+const { push, pop, remaining } = new Uniqueue();
 
 const _ = require('lodash');
-const { reporter } = require('gatsby/node_modules/gatsby-cli/lib/reporter/reporter');
-const { report } = require('process');
 
 exports.authenticate = ({key, secret, region}, reporter) => {
   try {
@@ -36,7 +34,7 @@ exports.syncDown = async (client, localPath, remotePath, reporter) => {
       const { TransferMonitor } = S3SyncClient;
       const monitor = new TransferMonitor();
       monitor.on('progress', (progress) => {
-        reporter.info(`Sync'ing file ${progress.count.current} of ${progress.count.total}`)
+        logProgessDebounced(`Downliding file ${fullLocalDirectoryPath} from s3`, progress, reporter);
       });
 
       await client.sync(remotePath, localPath, { monitor });
@@ -48,17 +46,13 @@ exports.syncDown = async (client, localPath, remotePath, reporter) => {
     }
 }
 
-const upsertFiles = async(client, fullLocalDirectoryPath, fullRemoteDirectoryPath) => {
+const upsertFiles = async(client, fullLocalDirectoryPath, fullRemoteDirectoryPath, reporter) => {
   try {
     const { TransferMonitor } = S3SyncClient;
     const monitor = new TransferMonitor();
 
     monitor.on('progress', (progress) => {
-      
-      const total = progress.size.total / 1024 / 1024;
-      const current = progress.size.current / 1024 / 1024;
-
-      reporter.info(`Sync'ing directory ${fullLocalDirectoryPath}, ${current.toFixed(2)}MB/${total.toFixed(2)}MB. File ${progress.count.current} of ${progress.count.total}`);
+      logProgessDebounced(`Sync'ing directory ${fullLocalDirectoryPath}`, progress, reporter);
     });
 
     await client.sync(fullLocalDirectoryPath, fullRemoteDirectoryPath, { monitor, del: true });
@@ -68,6 +62,15 @@ const upsertFiles = async(client, fullLocalDirectoryPath, fullRemoteDirectoryPat
     reporter.error(`An error occurred sync'ing file ${fullLocalPath}. ` + JSON.stringify(error));
   }
 }
+
+const logProgress = (message, progress, reporter) => {
+  const total = progress.size.total / 1024 / 1024;
+  const current = progress.size.current / 1024 / 1024;
+
+  reporter.info(`${message}, ${current.toFixed(2)}MB/${total.toFixed(2)}MB. File ${progress.count.current} of ${progress.count.total}`);
+}
+
+const logProgessDebounced = _.debounce((message, progress, reporter) => logProgress(message, progress, reporter), 500, { 'leading': true, 'trailing': false });
 
 /*
  * When a file has been changed we extract the parent directory from the filepath (as the S3 sync works at directory 
@@ -94,7 +97,8 @@ const flushDirectoryQueue = async(client, bucket, reporter) => {
   }
 }
 
-const flushDirectoryQueueDebounced = _.debounce(async (client, bucket, reporter) => await flushDirectoryQueue(client, bucket, reporter), 5000);
+const FLUSH_WAIT=10000;
+const flushDirectoryQueueDebounced = _.debounce(async (client, bucket, reporter) => await flushDirectoryQueue(client, bucket, reporter), FLUSH_WAIT);
 
 /**
  * Shamelessly swipped from gatsby-source-filesystem; all credit goes to them.
@@ -233,20 +237,13 @@ Please pick a path to an existing directory.
     localPublicPath = path.resolve(process.cwd(), localPublicPath)
   }
 
-  reporter.info('this 1')
-
-  const fsMachine = createFSMachine(client, localCachePath, localPublicPath, bucket, reporter)
-
-  reporter.info('this 2')
+  const fsMachine = createFSMachine(client, localCachePath, localPublicPath, bucket, reporter);
 
   // Once bootstrap is finished, we only let one File node update go through
   // the system at a time.
   emitter.on(`BOOTSTRAP_FINISHED`, () => {
-    reporter.info('Bootstrap has finished');
     fsMachine.send(`BOOTSTRAP_FINISHED`)
   })
-
-  reporter.info('this 3')
 
   const watcher = chokidar.watch([localCachePath, localPublicPath], {
     ignored: [
@@ -263,41 +260,20 @@ Please pick a path to an existing directory.
     ],
   });
 
-  reporter.info('this 4')
-
   watcher.on(`add`, filePath => {
     fsMachine.send({ type: `CHOKIDAR_ADD`, pathType: `file`, filePath })
   });
-
-  reporter.info('this 5')
 
   watcher.on(`change`, filePath => {
     fsMachine.send({ type: `CHOKIDAR_CHANGE`, pathType: `file`, filePath })
   });
 
-  reporter.info('this 6')
-
   watcher.on(`unlink`, filePath => {
     fsMachine.send({ type: `CHOKIDAR_UNLINK`, pathType: `file`, filePath })
   });
 
-  reporter.info('this 7')
-
-  watcher.on(`addDir`, filePath => {
-    fsMachine.send({ type: `CHOKIDAR_ADD`, pathType: `directory`, filePath })
-  });
-
-  reporter.info('this 8')
-
-  watcher.on(`unlinkDir`, filePath => {
-    fsMachine.send({ type: `CHOKIDAR_UNLINK`, pathType: `directory`, filePath })
-  });
-
-  reporter.info('this 9')
-
   return new Promise((resolve, reject) => {
     watcher.on(`ready`, () => {
-        reporter.info('this 10');
       fsMachine.send({ type: `CHOKIDAR_READY`, resolve, reject })
     });
   });
