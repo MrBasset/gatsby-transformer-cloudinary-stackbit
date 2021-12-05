@@ -41,13 +41,14 @@ module.exports = {
       },
     },
     {
-      resolve: require.resolve(`${__dirname}/plugins/gatsby-plugin-googlecache`),
+      resolve: require.resolve(`${__dirname}/plugins/gatsby-plugin-s3cache`),
       options: {
         localCachePath: `${__dirname}/.cache`,
         localPublicPath: `${__dirname}/public`,
-        remoteDirectory: '.gatsby',
-        email: process.env.OAUTH_EMAIL,
-        key: process.env.OAUTH_KEY
+        bucket: 'gatsby-stackbit-test',
+        key: process.env.S3_API_KEY,
+        secret: process.env.S3_API_SECRET,
+        region: 'ca-central-1'
       },
     },
     `gatsby-transformer-remark`,
