@@ -34,7 +34,7 @@ exports.syncDown = async (client, localPath, remotePath, reporter) => {
       const { TransferMonitor } = S3SyncClient;
       const monitor = new TransferMonitor();
       monitor.on('progress', (progress) => {
-        logProgessDebounced(`Downliding file ${fullLocalDirectoryPath} from s3`, progress, reporter);
+        logProgessDebounced(`Downloading file ${localPath} from s3`, progress, reporter);
       });
 
       await client.sync(remotePath, localPath, { monitor });
