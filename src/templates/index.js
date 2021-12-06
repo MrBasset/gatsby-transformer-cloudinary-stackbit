@@ -49,25 +49,25 @@ const IndexTemplate = ({data}) => {
     console.log(data);
 
   return (
-    <Layout>
+    <Layout data-sb-object-id={data.id}>
       <Seo title="Home" />
-      <h1>{data.markdownRemark.frontmatter.title}</h1>
+      <h1 data-sb-field-path="title">{data.markdownRemark.frontmatter.title}</h1>
       <p>Welcome to your new Gatsby site.</p>
       <p>Now go build something great.</p>
       <h2>Gatsby Sharp - Fixed</h2>
-      <GatsbyImage
+      <GatsbyImage data-sb-field-path="fixed_image"
         image={data.markdownRemark.frontmatter.fixed_image.childCloudinaryAsset.gatsbyImageData}
         alt={data.markdownRemark.frontmatter.fixed_alt}
         style={{ marginBottom: `1.45rem` }}
       />
       <h2>Gatsby Sharp - Constrained</h2>
-      <GatsbyImage
+      <GatsbyImage data-sb-field-path="constrained_image"
         image={data.markdownRemark.frontmatter.constrained_image.childCloudinaryAsset.gatsbyImageData}
         alt={data.markdownRemark.frontmatter.constrained_alt}
         style={{ marginBottom: `1.45rem` }}
       />
       <h2>Gatsby Sharp - Full Width</h2>
-      <GatsbyImage
+      <GatsbyImage data-sb-field-path="fullwidth_image"
         image={data.markdownRemark.frontmatter.fullwidth_image.childCloudinaryAsset.gatsbyImageData}
         alt={data.markdownRemark.frontmatter.fullwidth_alt}
         style={{ marginBottom: `1.45rem` }}

@@ -1,0 +1,39 @@
+home:
+  type: page
+  label: Home
+  layout: index
+  hideContent: true
+  fields:
+  - type: string
+    name: title
+    label: Title
+    description: The title of the page
+    required: true
+  - type: image
+    name: fixed_image
+    label: Fixed Image
+    description: The fixed image
+  - type: string
+    name: fixed_alt
+    label: Fixed image alt text
+    description: The alt text of the fixed image
+  - type: image
+    name: constrained_image
+    label: Constrained Image
+    description: The constrained image
+  - type: string
+    name: constrained_alt
+    label: Constrained image alt text
+    description: The alt text of the constrained image
+  - type: image
+    name: fullwidth_image
+    label: Full width Image
+    description: The full width image
+  - type: string
+    name: fullwidth_alt
+    label: Full width image alt text
+    description: The alt text of the full width image
+  - type: string
+    name: template
+    const: index
+    hidden: true
