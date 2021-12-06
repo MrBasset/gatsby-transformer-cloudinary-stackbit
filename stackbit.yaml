@@ -8,11 +8,10 @@ assets:
   uploadDir: images
 pagesDir: src/pages
 pageLayoutKey: template
+objectTypeKey: type
 buildCommand: gatsby build
 devCommand: gatsby develop
 publishDir: public
-pageLayoutKey: layout
-objectTypeKey: type
 contentModels:
   home:
     isPage: true
