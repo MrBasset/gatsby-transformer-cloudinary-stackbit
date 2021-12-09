@@ -1,5 +1,5 @@
 home:
-  name: home
+  type: page
   label: Home
   layout: index
   hideContent: true
