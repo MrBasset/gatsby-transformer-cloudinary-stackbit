@@ -5,9 +5,11 @@ buildCommand: gatsby build
 devCommand: gatsby develop
 publishDir: public
 assets: 
-  referenceType: relative
+  referenceType: static
   assetsDir: cloudinary
   uploadDir: images
+  staticDir: static
+  publicPath: /
 pagesDir: src/pages
 pageLayoutKey: template
 cmsName: git

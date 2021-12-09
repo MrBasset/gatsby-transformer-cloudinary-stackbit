@@ -187,11 +187,11 @@ const createFSMachine = (
         actions: {
           async upsertFile(_, { pathType, filePath }) {
 
-            queueFileParentDirectory (client, bucket, filePath, reporter);
+            queueFileParentDirectory (client, bucket, localCachePath, reporter);
           },
           async deleteFile(_, { pathType, filePath }) {
 
-            queueFileParentDirectory (client, bucket, filePath, reporter);
+            queueFileParentDirectory (client, bucket, localCachePath, reporter);
           },
         },
       }
