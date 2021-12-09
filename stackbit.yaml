@@ -1,20 +1,62 @@
-stackbitVersion: ~0.4.0
+stackbitVersion: ~0.3.0
 ssgName: gatsby
 nodeVersion: 16
-cmsName: git
+buildCommand: gatsby build
+devCommand: gatsby develop
+publishDir: public
 assets: 
-  referenceType: static
+  referenceType: relative
   assetsDir: cloudinary
   uploadDir: images
 pagesDir: src/pages
 pageLayoutKey: template
-buildCommand: gatsby build
-devCommand: gatsby develop
-publishDir: public
-pageLayoutKey: layout
-objectTypeKey: type
-contentModels:
+cmsName: git
+logicFields:
+  - home.template
+  - home.fixed_image
+  - home.constrained_image
+  - home.fullwidth_image
+models:
   home:
-    isPage: true
-    urlPath: '/{slug}'
-    newFilePath: '{slug}.md'
+    type: page
+    label: Home
+    file: index.md
+    singleInstance: true
+    urlPath: /
+    filePath: index.md
+    fields:
+      - type: string
+        name: title
+        label: Title
+        description: The title of the page
+        required: true
+      - type: image
+        name: fixed_image
+        label: Fixed Image
+        description: The fixed image
+      - type: string
+        name: fixed_alt
+        label: Fixed image alt text
+        description: The alt text of the fixed image
+      - type: image
+        name: constrained_image
+        label: Constrained Image
+        description: The constrained image
+      - type: string
+        name: constrained_alt
+        label: Constrained image alt text
+        description: The alt text of the constrained image
+      - type: image
+        name: fullwidth_image
+        label: Full width Image
+        description: The full width image
+      - type: string
+        name: fullwidth_alt
+        label: Full width image alt text
+        description: The alt text of the full width image
+      - type: string
+        name: template
+        const: index
+        hidden: true
+    labelField: title
+    hideContent: true
